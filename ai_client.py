@@ -4,7 +4,12 @@ import streamlit as st
 from groq import Groq
 
 
-def call_ai(prompt, system_prompt="You are a helpful AI assistant.", max_tokens=1500):
+def call_ai(
+    prompt,
+    system_prompt="You are a helpful AI assistant.",
+    max_tokens=1500,
+    model=None,
+):
     api_key = None
 
     try:
