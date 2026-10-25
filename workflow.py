@@ -151,7 +151,7 @@ Do not claim that external facts have been independently verified.
 """,
         system_prompt="You are a strict educational quality-control reviewer.",
         model=model,
-        max_tokens=2000,
+        max_tokens=5000,
     )
     stages["AI Quality Control"] = quality_report
 
