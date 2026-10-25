@@ -125,9 +125,7 @@ if submitted:
                 "level": level,
             }
 
-            status_text.success(
-                "All five workflow stages completed."
-            )
+            status_text.success("Study pack generated successfully.")
 
         except Exception as error:
             status_text.empty()
