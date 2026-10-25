@@ -13,7 +13,7 @@ def run_workflow(
     model=None,
     progress_callback=None,
 ):
-    """Run the complete five-stage AI study-pack workflow."""
+    """Generate a study pack using a token-conscious five-stage workflow."""
 
     stages = {}
 
@@ -21,31 +21,37 @@ def run_workflow(
         if progress_callback:
             progress_callback(name, percent)
 
+    # Keep user-provided source notes within a reasonable size.
+    source_notes = (source_notes or "").strip()[:4000]
+    goals = (goals or "").strip()[:1000]
+
+    model_args = {"model": model} if model else {}
+
     # Stage 1: Planning
     update_progress("Stage 1/5: Planning", 10)
 
     planning = call_ai(
         prompt=f"""
-Create a clear study plan.
+Create a concise study plan.
 
 Subject: {subject}
 Topic: {topic}
 Education level: {level}
-Learning goals: {goals or "Suggest suitable learning goals."}
-Available source notes:
-{source_notes or "No source notes provided."}
+Learning goals: {goals or "Suggest suitable goals."}
+Source notes: {source_notes or "None provided."}
 
 Include:
 - Learning Objectives
 - Key Concepts
-- Suggested Study Order
-- Important Prerequisites
+- Study Order
+- Prerequisites
 
 Do not invent syllabus requirements.
+Keep the plan brief.
 """,
         system_prompt="You are an educational planning agent.",
-        model=model,
-        max_tokens=1500,
+        max_tokens=800,
+        **model_args,
     )
     stages["Planning"] = planning
 
@@ -54,32 +60,31 @@ Do not invent syllabus requirements.
 
     content = call_ai(
         prompt=f"""
-Create educational study material using the plan below.
+Create clear study material.
 
 Subject: {subject}
 Topic: {topic}
-Education level: {level}
-Learning goals: {goals or "Use the learning objectives in the plan."}
+Level: {level}
+Goals: {goals or "Use the plan below."}
 
 PLAN:
-{planning}
+{planning[:3000]}
 
 SOURCE NOTES:
-{source_notes or "No source notes provided."}
+{source_notes or "None provided."}
 
-Requirements:
-- Use the heading Learning Objectives.
-- Use the heading Study Notes.
-- Explain key concepts in clear language.
-- Include relevant examples.
-- Use the heading Summary.
-- Do not invent citations or unsupported facts.
-- If source material is incomplete, acknowledge uncertainty.
-- Keep the content appropriate for the specified level.
+Include:
+- Learning Objectives
+- Study Notes with explanations and examples
+- Summary
+
+Use clear language suitable for the specified level.
+Do not invent citations or unsupported facts.
+Keep the material focused and concise.
 """,
         system_prompt="You are an educational content generation agent.",
-        model=model,
-        max_tokens=3500,
+        max_tokens=1800,
+        **model_args,
     )
     stages["Content Generation"] = content
 
@@ -88,29 +93,27 @@ Requirements:
 
     assessment = call_ai(
         prompt=f"""
-Create assessments based on the study material below.
+Create an assessment using the study material below.
 
-TOPIC: {topic}
-SUBJECT: {subject}
-EDUCATION LEVEL: {level}
+Subject: {subject}
+Topic: {topic}
+Level: {level}
 
 STUDY MATERIAL:
-{content}
+{content[:7000]}
 
-Generate:
-1. Exactly {mcq_count} multiple-choice questions.
-2. Four options per MCQ, labelled A, B, C, D.
-3. The correct answer and a short explanation for each MCQ.
-4. Exactly {flashcard_count} flashcards in Question / Answer format.
-5. A short-answer revision section.
+Create:
+1. Exactly {mcq_count} MCQs, each with A, B, C, D options,
+   the correct answer, and a brief explanation.
+2. Exactly {flashcard_count} flashcards in Question / Answer format.
+3. Short-answer revision questions.
 
-Use the headings MCQs and Flashcards.
-Make questions relevant to the supplied material.
-Do not create questions that require facts absent from the material.
+Use headings MCQs, Flashcards, and Short-Answer Questions.
+Keep each item concise and relevant to the supplied material.
 """,
         system_prompt="You are an educational assessment agent.",
-        model=model,
-        max_tokens=3500,
+        max_tokens=1800,
+        **model_args,
     )
     stages["Assessment"] = assessment
 
@@ -119,39 +122,32 @@ Do not create questions that require facts absent from the material.
 
     quality_report = call_ai(
         prompt=f"""
-Review the following educational study pack.
+Review this study pack for important problems only.
 
 TOPIC: {topic}
 SUBJECT: {subject}
 LEVEL: {level}
 
-STUDY CONTENT:
-{content}
+STUDY MATERIAL:
+{content[:5000]}
 
-ASSESSMENTS:
-{assessment}
+ASSESSMENT:
+{assessment[:5000]}
 
-Check:
-- Relevance to the requested topic.
-- Coverage of the learning objectives.
-- Internal factual consistency.
-- Whether MCQ answers match their explanations.
-- Duplicate questions and flashcards.
-- Ambiguous questions or answer options.
-- Missing or poorly formatted sections.
-- Unsupported claims and uncertainty.
+Check topic relevance, factual consistency within the material,
+MCQ answer correctness, duplicate items, ambiguity, and missing sections.
 
 Return:
-1. Overall quality assessment.
-2. A list of specific issues found.
-3. Suggested corrections.
-4. State "No major issues identified" only if appropriate.
+- Overall assessment
+- Up to 5 specific issues, if any
+- Brief suggested corrections
 
-Do not claim that external facts have been independently verified.
+Do not claim external facts were independently verified.
+Keep your report concise.
 """,
         system_prompt="You are a strict educational quality-control reviewer.",
-        model=model,
-        max_tokens=1500,
+        max_tokens=600,
+        **model_args,
     )
     stages["AI Quality Control"] = quality_report
 
@@ -160,38 +156,39 @@ Do not claim that external facts have been independently verified.
 
     final_pack = call_ai(
         prompt=f"""
-Produce the final, improved study pack.
+Create the final study pack using the material and review below.
 
-TOPIC: {topic}
 SUBJECT: {subject}
-EDUCATION LEVEL: {level}
+TOPIC: {topic}
+LEVEL: {level}
 
-PLANNING:
-{planning}
+STUDY MATERIAL:
+{content[:5000]}
 
-GENERATED STUDY CONTENT:
-{content}
+ASSESSMENT:
+{assessment[:5000]}
 
-ASSESSMENTS:
-{assessment}
+QUALITY REVIEW:
+{quality_report[:1500]}
 
-AI QUALITY CONTROL REPORT:
-{quality_report}
+Correct clear issues where possible. Preserve useful material.
+Do not regenerate everything unnecessarily.
 
-Requirements:
-- Correct issues identified by quality control where possible.
-- Preserve accurate, relevant educational material.
-- Include Learning Objectives, Study Notes, Summary, MCQs,
-  Flashcards and Short-Answer Questions.
-- Keep MCQ answers and explanations consistent.
-- Include a Revision Checklist.
-- Do not invent facts, citations or sources.
-- If an issue cannot be resolved confidently, disclose it.
-- Return the complete study pack in clean Markdown.
+Include:
+- Learning Objectives
+- Study Notes
+- Summary
+- MCQs with answers and explanations
+- Flashcards
+- Short-Answer Questions
+- Revision Checklist
+
+Do not invent facts, citations, or sources.
+Use clean Markdown and concise explanations.
 """,
         system_prompt="You are an educational refinement agent.",
-        model=model,
-        max_tokens=5000,
+        max_tokens=1500,
+        **model_args,
     )
     stages["Refinement"] = final_pack
 
