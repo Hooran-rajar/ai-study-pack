@@ -46,8 +46,19 @@ with st.sidebar:
         ],
     )
 
-    mcq_count = st.slider("Number of MCQs", 5, 20, 10)
-    flashcard_count = st.slider("Number of Flashcards", 5, 20, 10)
+    mcq_count = st.select_slider(
+        "Number of MCQs",
+        options=[5, 10, 15],
+        value=5,
+        help="Choose how many multiple-choice questions to generate.",
+    )
+
+    flashcard_count = st.select_slider(
+        "Number of Flashcards",
+        options=[5, 10, 15],
+        value=5,
+        help="Choose how many flashcards to generate.",
+    )
 
     model = st.text_input(
         "Groq model ID",
@@ -60,14 +71,18 @@ with st.form("study_pack_form"):
         "Study Topic",
         placeholder="e.g. Machine Learning",
     )
+
     goals = st.text_area(
         "Learning Goals",
         placeholder="What do you want to learn?",
     )
+
     source_notes = st.text_area(
         "Optional: Syllabus or Class Notes",
         placeholder="Paste relevant class notes here...",
         height=160,
+        max_chars=4000,
+        help="Keep notes concise to reduce AI token usage.",
     )
 
     submitted = st.form_submit_button(
@@ -95,8 +110,8 @@ if submitted:
                     topic=topic.strip(),
                     subject=subject,
                     level=level,
-                    goals=goals.strip(),
-                    source_notes=source_notes.strip(),
+                    goals=goals.strip()[:1000],
+                    source_notes=source_notes.strip()[:4000],
                     mcq_count=mcq_count,
                     flashcard_count=flashcard_count,
                     model=model.strip(),
@@ -110,7 +125,9 @@ if submitted:
                 "level": level,
             }
 
-            status_text.success("All five workflow stages completed.")
+            status_text.success(
+                "All five workflow stages completed."
+            )
 
         except Exception as error:
             status_text.empty()
