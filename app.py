@@ -121,12 +121,10 @@ if submitted:
 
             status_text.success("All five workflow stages completed.")
 
-        except Exception as error:
-            status_text.empty()
-            st.error(
-                "The workflow failed. Check your API key, model ID, "
-                "internet connection and Groq API limits."
-            )
+      except Exception as error:
+    status_text.empty()
+    st.error("Actual workflow error:")
+    st.exception(error)
             st.caption(f"Error details: {error}")
 
 
