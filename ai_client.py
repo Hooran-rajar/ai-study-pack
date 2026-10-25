@@ -37,21 +37,23 @@ def call_ai(
         "GROQ_MODEL", "openai/gpt-oss-20b"
     )
 
-    response = client.chat.completions.create(
-        model=selected_model,
-        messages=[
-            {
-                "role": "system",
-                "content": system_prompt,
-            },
-            {
-                "role": "user",
-                "content": prompt,
-            },
-        ],
-        max_tokens=max_tokens,
-        temperature=0.2,
-    )
+  response = client.chat.completions.create(
+    model=selected_model,
+    messages=[
+        {
+            "role": "system",
+            "content": system_prompt,
+        },
+        {
+            "role": "user",
+            "content": prompt,
+        },
+    ],
+    max_tokens=max_tokens,
+    temperature=0.2,
+    reasoning_effort="low",
+    include_reasoning=False,
+)
 
     result = response.choices[0].message.content
 
