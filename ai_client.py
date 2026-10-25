@@ -37,7 +37,7 @@ def call_ai(
         "GROQ_MODEL", "openai/gpt-oss-20b"
     )
 
-  response = client.chat.completions.create(
+ response = client.chat.completions.create(
     model=selected_model,
     messages=[
         {
@@ -49,11 +49,23 @@ def call_ai(
             "content": prompt,
         },
     ],
-    max_tokens=max_tokens,
+    max_completion_tokens=max_tokens,
     temperature=0.2,
     reasoning_effort="low",
     include_reasoning=False,
 )
+
+print("Finish reason:", response.choices[0].finish_reason)
+print("Usage:", response.usage)
+print("Message:", response.choices[0].message)
+
+content = response.choices[0].message.content
+
+if not content or not content.strip():
+    raise RuntimeError(
+        f"The AI returned an empty response. "
+        f"Finish reason: {response.choices[0].finish_reason}"
+    )
 
     result = response.choices[0].message.content
 
